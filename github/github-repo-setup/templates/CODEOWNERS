@@ -1,0 +1,4 @@
+# Protected paths: changes here need the captain's approval.
+# They define how this repo is checked, so an agent must not be able to change them alone.
+/.github/   @OWNER
+/VISION.md  @OWNER
