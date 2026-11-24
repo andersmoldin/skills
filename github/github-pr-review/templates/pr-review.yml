@@ -60,6 +60,10 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ steps.app.outputs.token }}
+          # The author app opens PRs, and outside contributors are reviewed too (VISION).
+          # Safe here because the reviewer runs no PR code: restrict_untrusted_prs stays on.
+          allowed_bots: "*"
+          allowed_non_write_users: "*"
           prompt: |
             Review pull request #${{ github.event.pull_request.number }} in ${{ github.repository }}.
             Mode: ${{ vars.PR_REVIEW_MODE == 'enforce' && 'enforce' || 'observe' }}.
