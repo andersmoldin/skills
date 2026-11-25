@@ -14,7 +14,7 @@ Skriptet `scripts/fetch_video.py` hämtar en video till en ny katalog:
 ## Kör
 
 ```bash
-python3 -I ~/.claude/skills/youtube-research/scripts/fetch_video.py "URL" --frames 30
+python3 -I "${CLAUDE_SKILL_DIR}/scripts/fetch_video.py" "URL" --frames 30
 ```
 
 Utan `--out` skapas en ny temp-katalog. Sista raden på stdout är JSON med `out`, `transcript_words` och `frames`.

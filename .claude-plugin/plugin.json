@@ -1,0 +1,17 @@
+{
+  "name": "moldin-skills",
+  "description": "Skills for protecting GitHub repos where agents write the code, and for researching YouTube videos.",
+  "author": {
+    "name": "Anders Moldin",
+    "url": "https://github.com/andersmoldin"
+  },
+  "homepage": "https://github.com/andersmoldin/skills",
+  "repository": "https://github.com/andersmoldin/skills",
+  "license": "MIT",
+  "skills": [
+    "./github/github-pr-author",
+    "./github/github-pr-review",
+    "./github/github-repo-setup",
+    "./research/youtube-research"
+  ]
+}
