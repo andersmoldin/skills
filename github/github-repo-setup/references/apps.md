@@ -7,7 +7,9 @@ App names are global on GitHub, so prefix them with your handle: `HANDLE-pr-auth
 | App | Repository permissions | Key lives in |
 |---|---|---|
 | `HANDLE-pr-author` | Contents: write, Pull requests: write, Workflows: write, Checks: read, Actions: read | Agent Vault; macOS keychain until Agent Vault exists |
-| `HANDLE-pr-review` | Contents: read, Pull requests: write, Checks: read, Actions: read | the repo's `pr-review` environment (repo secrets on ADVISORY repos) |
+| `HANDLE-pr-review` | Contents: write, Pull requests: write, Checks: read, Actions: read | the repo's `pr-review` environment (repo secrets on ADVISORY repos) |
+
+The review app needs Contents: **write** although it never pushes: GitHub counts an approval toward the ruleset only from a reviewer with write access (verified on andersmoldin/skills#22, where the same approval with Contents: read left the PR at *review required*). Its key stays usable only from the default branch, and the reviewer has no tool that pushes.
 
 Webhooks off, installable only on the owner's account. Neither app has Administration permission, so neither can change rulesets or settings.
 
@@ -16,7 +18,7 @@ Webhooks off, installable only on the owner's account. Neither app has Administr
 Prefilled forms (click **Create GitHub App** at the bottom):
 
 - author: `https://github.com/settings/apps/new?name=HANDLE-pr-author&url=https://github.com/OWNER&public=false&webhook_active=false&contents=write&pull_requests=write&workflows=write&checks=read&actions=read`
-- reviewer: `https://github.com/settings/apps/new?name=HANDLE-pr-review&url=https://github.com/OWNER&public=false&webhook_active=false&contents=read&pull_requests=write&checks=read&actions=read`
+- reviewer: `https://github.com/settings/apps/new?name=HANDLE-pr-review&url=https://github.com/OWNER&public=false&webhook_active=false&contents=write&pull_requests=write&checks=read&actions=read`
 
 On each app's page: note the **App ID** (*General*), then *Credentials* → *Key pairs* → **New key** (downloads a `.pem`).
 
