@@ -23,9 +23,12 @@ class CheckSkills(unittest.TestCase):
         folder.mkdir(parents=True)
         (folder / "SKILL.md").write_text(f"---\nname: {folder.name}\ndescription: Does a thing.\n---\n", encoding="utf-8")
 
-    def manifest(self, manifest: dict) -> None:
+    def manifest(self, manifest: dict, marketplace_entry: dict | None = None) -> None:
         (self.root / ".claude-plugin").mkdir(exist_ok=True)
         (self.root / ".claude-plugin" / "plugin.json").write_text(json.dumps(manifest), encoding="utf-8")
+        entry = marketplace_entry or {"name": manifest.get("name"), "source": "./"}
+        marketplace = {"name": "m", "owner": {"name": "o"}, "plugins": [entry]}
+        (self.root / ".claude-plugin" / "marketplace.json").write_text(json.dumps(marketplace), encoding="utf-8")
 
     def check(self) -> subprocess.CompletedProcess:
         return subprocess.run([sys.executable, "-I", str(self.root / "scripts" / "check_skills.py")],
@@ -62,12 +65,43 @@ class CheckSkills(unittest.TestCase):
         self.assertIn("./github/renamed-away: listed", result.stdout)
         self.assertIn("./research/gone: listed", result.stdout)
 
+    def test_two_skills_with_the_same_name_fail(self):
+        self.skill("github/twin")
+        self.skill("research/twin")
+        self.manifest({"name": "p", "skills": ["./github/twin", "./research/twin"]})
+        result = self.check()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("twin", result.stdout)
+        self.assertIn("same name", result.stdout)
+
+    def test_skill_listed_twice_fails(self):
+        self.skill("github/one")
+        self.manifest({"name": "p", "skills": ["./github/one", "./github/one/"]})
+        result = self.check()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("listed more than once", result.stdout)
+
     def test_version_in_plugin_json_fails(self):
         self.skill("github/real")
         self.manifest({"name": "p", "version": "1.0.0", "skills": ["./github/real"]})
         result = self.check()
         self.assertEqual(result.returncode, 1)
         self.assertIn("version", result.stdout)
+
+    def test_version_in_marketplace_entry_fails(self):
+        self.skill("github/real")
+        self.manifest({"name": "p", "skills": ["./github/real"]}, {"name": "p", "source": "./", "version": "1.0.0"})
+        result = self.check()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("marketplace.json", result.stdout)
+        self.assertIn("version", result.stdout)
+
+    def test_marketplace_without_an_entry_for_the_plugin_fails(self):
+        self.skill("github/real")
+        self.manifest({"name": "p", "skills": ["./github/real"]}, {"name": "renamed", "source": "./"})
+        result = self.check()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("no entry for plugin 'p'", result.stdout)
 
     def test_unusable_plugin_json_fails_with_a_message(self):
         cases = {

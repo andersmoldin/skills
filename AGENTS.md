@@ -9,16 +9,16 @@ What belongs here is in `VISION.md`; what the reviewer approves is in `.github/p
 
 ## Rules
 
-- Adding, renaming or removing a skill changes the `skills` list in `.claude-plugin/plugin.json` and the table in `README.md` in the same change. `scripts/check_skills.py` fails CI when the list and the skill folders disagree.
-- `plugin.json` has no `version`: installs then track the commit SHA, so auto-update picks up every merge. A `version` nobody bumps stops every machine from updating; the check rejects it.
-- A skill refers to its own files as `${CLAUDE_SKILL_DIR}/...`, never a path under `~/.claude/skills/`, which does not exist when the skill comes from the plugin.
+- Adding, renaming or removing a skill changes the `skills` list in `.claude-plugin/plugin.json` (one `./` path per skill folder) and the table in `README.md` in the same change. `scripts/check_skills.py` fails CI when the list and the skill folders disagree.
+- Neither `plugin.json` nor the marketplace entry has a `version`: installs then track the commit SHA, so auto-update picks up every merge. A `version` nobody bumps stops every machine from updating; the check rejects it.
+- A command in a skill reaches the skill's own files through `${CLAUDE_SKILL_DIR}/...`, never a path under `~/.claude/skills/`, which does not exist when the skill comes from the plugin.
 
 ## Checks
 
 ```bash
 python3 scripts/check_skills.py
 python3 -m unittest discover -s scripts
-claude plugin validate .   # one warning, the missing version, is intended
+claude plugin validate .   # the "No version specified" warnings are intended
 ```
 
 Test installs with `CLAUDE_CONFIG_DIR` set to a throwaway directory, never against your own Claude Code setup.
