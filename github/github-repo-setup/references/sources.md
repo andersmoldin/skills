@@ -14,7 +14,7 @@ Sources:
 | Approval from someone other than the last pusher | The author cannot approve its own last push | SCM |
 | New commits dismiss approvals | An approval covers the code that was read, not later code | SCM |
 | Conversations resolved before merge | Review comments are answered, not ignored | SCM |
-| Code owners for `/.github/` and `/VISION.md` | The files that define the checks cannot be changed by the agents they check | SCM, GH (CODEOWNERS for workflows) |
+| Code owners for `/.github/`, `/VISION.md` and code that runs with the captain's credentials | The files that define the checks cannot be changed by the agents they check | SCM, GH (CODEOWNERS for workflows) |
 | Required checks bound to GitHub Actions | Another app cannot fake a green check | SC Branch-Protection, local |
 | No bypass actors | An exception for the owner is an exception for anything running as the owner; emergencies use the logged switch instead | SCM (limit who can bypass), local |
 | Squash only, linear history | One commit per PR, titled by the PR, which drives the version | local (convention) |
