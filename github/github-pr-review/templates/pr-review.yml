@@ -16,10 +16,6 @@ on:
 
 permissions: {}
 
-concurrency:
-  group: pr-review-${{ github.event.pull_request.number || github.event.issue.number }}
-  cancel-in-progress: true
-
 jobs:
   escalate-untrusted:
     if: >-
@@ -46,6 +42,9 @@ jobs:
         && github.event.issue.pull_request
         && github.event.comment.user.login == github.repository_owner
         && startsWith(github.event.comment.body, '@review'))
+    concurrency:
+      group: pr-review-${{ github.event.pull_request.number || github.event.issue.number }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     environment: pr-review # secrets usable from the default branch only
     timeout-minutes: 30

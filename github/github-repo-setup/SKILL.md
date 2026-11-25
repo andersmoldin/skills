@@ -18,7 +18,7 @@ You are acting for the **captain**: the repo owner, whose own account is the onl
 | Author app (`<handle>-pr-author`) | key in Agent Vault (keychain until then) | nothing alone: pushes branches, opens PRs |
 | Review app (`<handle>-pr-review`) | key in the `pr-review` environment, locked to `main` | approves ordinary changes |
 
-Main accepts only squash-merged PRs with one approval from someone other than the last pusher, green required checks, resolved threads, and code-owner approval for protected paths (`/.github/`, `/VISION.md`). No bypass actors, ever. Why each rule exists, and its source: [`references/sources.md`](references/sources.md).
+Main accepts only squash-merged PRs with one approval from someone other than the last pusher, green required checks, resolved threads, and code-owner approval for protected paths (`/.github/`, `/VISION.md`, and code that runs with the captain's credentials). No bypass actors, ever. Why each rule exists, and its source: [`references/sources.md`](references/sources.md).
 
 ## Protection level
 

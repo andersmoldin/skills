@@ -29,4 +29,4 @@ Read the failing job's log (`gh run view --log-failed`), fix the cause in the ch
 
 ## Protected paths
 
-Changes under `/.github/` or to `/VISION.md` need the captain's approval whatever the reviewer says. Keep them in their own PR, separate from the feature that motivates them, so the rest is not held up.
+Changes under `/.github/`, to `/VISION.md`, or to code that runs with the captain's credentials (listed in `CODEOWNERS`) need the captain's approval whatever the reviewer says. Keep them in their own PR, separate from the feature that motivates them, so the rest is not held up.
