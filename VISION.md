@@ -37,7 +37,7 @@ It states what it has verified and what it has not.
 
 Every change is approved by someone other than its author before it reaches main, whether an agent, Anders or an outside contributor wrote it.
 A contribution from anyone is welcome when it makes a skill more useful and meets the same bar.
-Outside contributions go through the same review agent as everything else, so the captain is not a gate for them; if that proves weak, the rule changes, not the review.
+Outside contributions are welcome, and the captain approves them, because text from strangers can steer an agent into approving.
 A small, straightforward change may skip the heavier validation pipeline, never the approval.
 A skill may be renamed when a clearer name is needed, and the change says so in its title, because its name and trigger are how people and other skills reach it.
 A renamed skill leaves no alias behind; callers are updated in the same change.

@@ -15,7 +15,7 @@ A change it has read in full that:
 
 Label `needs-captain`, request the captain's review, and say why in one comment. Escalate when the change:
 
-1. touches a protected path (`/.github/`, `/VISION.md`); CODEOWNERS enforces this too,
+1. touches a path listed in `.github/CODEOWNERS`; CODEOWNERS enforces this too,
 2. changes a default or other existing behaviour users rely on, even when it looks like an improvement,
 3. contains or exposes a secret, token, key, password, personal data or other sensitive information the captain has not explicitly approved,
 4. sits outside `VISION.md`, or the vision does not settle it,
