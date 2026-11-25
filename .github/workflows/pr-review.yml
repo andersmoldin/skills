@@ -125,7 +125,7 @@ jobs:
             exit 1
           fi
 
-      - name: Apply escalation (deterministic, from the reviewer's marker comment)
+      - name: Apply escalation (deterministic, from the reviewer's marker comment and approval)
         if: always() && steps.pr.outputs.same_repo == 'true' && steps.app.outputs.token != ''
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
@@ -137,7 +137,17 @@ jobs:
         run: |
           n=$(gh api "repos/$GH_REPO/issues/$PR/comments?since=$SINCE" \
             --jq "[.[] | select(.user.login == \"$BOT\" and (.body | startswith(\"<!-- needs-captain -->\")))] | length")
-          [ "$n" -gt 0 ] || exit 0
+          if [ "$n" -eq 0 ]; then
+            # No new escalation: an approval from this run means the PR stopped waiting on the captain.
+            approved=$(gh api --paginate "repos/$GH_REPO/pulls/$PR/reviews" \
+              --jq ".[] | select(.user.login == \"$BOT\" and .submitted_at >= \"$SINCE\" and .state == \"APPROVED\") | .id")
+            [ -n "$approved" ] || exit 0
+            labelled=$(gh pr view "$PR" --json labels --jq 'any(.labels[]; .name == "needs-captain")')
+            [ "$labelled" = true ] || exit 0
+            gh pr edit "$PR" --remove-label needs-captain
+            echo "approved without a new escalation: removed needs-captain"
+            exit 0
+          fi
           gh pr edit "$PR" --add-label needs-captain --add-reviewer "$CAPTAIN"
           # An escalation must stop the merge: withdraw any approval this reviewer gave.
           for id in $(gh api "repos/$GH_REPO/pulls/$PR/reviews" --jq ".[] | select(.user.login == \"$BOT\" and .state == \"APPROVED\") | .id"); do
