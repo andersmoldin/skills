@@ -9,7 +9,7 @@
     {
       "name": "moldin-skills",
       "source": "./",
-      "description": "Skills for protecting GitHub repos where agents write the code, and for researching YouTube videos.",
+      "description": "Skills for protecting GitHub repos where agents write the code, researching YouTube videos, and designing and building iOS games.",
       "category": "productivity"
     }
   ]

@@ -1,6 +1,6 @@
 {
   "name": "moldin-skills",
-  "description": "Skills for protecting GitHub repos where agents write the code, and for researching YouTube videos.",
+  "description": "Skills for protecting GitHub repos where agents write the code, researching YouTube videos, and designing and building iOS games.",
   "author": {
     "name": "Anders Moldin",
     "url": "https://github.com/andersmoldin"
@@ -12,6 +12,21 @@
     "./github/github-pr-author",
     "./github/github-pr-review",
     "./github/github-repo-setup",
+    "./ios-game/ios-game-art-direction",
+    "./ios-game/ios-game-audio-design",
+    "./ios-game/ios-game-audio-engine",
+    "./ios-game/ios-game-content-design",
+    "./ios-game/ios-game-controller",
+    "./ios-game/ios-game-design",
+    "./ios-game/ios-game-gamekit",
+    "./ios-game/ios-game-level-design",
+    "./ios-game/ios-game-realitykit",
+    "./ios-game/ios-game-spritekit",
+    "./ios-game/ios-game-system-design",
+    "./ios-game/ios-game-ui-design",
+    "./ios-game/ios-game-ux-design",
+    "./ios-game/ios-game-world-design",
+    "./ios-game/ios-game-writing",
     "./research/youtube-research"
   ]
 }

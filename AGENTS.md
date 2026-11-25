@@ -4,7 +4,7 @@ What belongs here is in `VISION.md`; what the reviewer approves is in `.github/p
 
 ## Layout
 
-- Each skill is `<area>/<skill-name>/SKILL.md` (areas today: `github/`, `research/`), with its scripts, templates and references beside it.
+- Each skill is `<area>/<skill-name>/SKILL.md` (areas today: `github/`, `ios-game/`, `research/`), with its scripts, templates and references beside it.
 - The repo root is a Claude Code plugin: `.claude-plugin/marketplace.json` (marketplace `moldin`) and `.claude-plugin/plugin.json` (plugin `moldin-skills`).
 
 ## Rules
