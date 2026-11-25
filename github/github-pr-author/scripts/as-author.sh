@@ -22,13 +22,17 @@ for c in openssl curl jq git security; do command -v "$c" >/dev/null || die "$c 
 b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
 
 repo_from_remote() {
-  local url; url=$(git remote get-url origin 2>/dev/null) || die "no 'origin' remote here"
-  url="${url%.git}"
-  case "$url" in
-    https://github.com/*) echo "${url#https://github.com/}" ;;
-    git@github.com:*) echo "${url#git@github.com:}" ;;
-    *) die "origin is not a github.com remote: $url" ;;
-  esac
+  # HTTPS only: the app token is injected as an HTTPS header, so an SSH remote (or an insteadOf
+  # rewrite to SSH) would push with the captain's own SSH key, silently.
+  local fetch push
+  fetch=$(git remote get-url origin 2>/dev/null) || die "no 'origin' remote here"
+  push=$(git remote get-url --push origin)
+  for u in "$fetch" "$push"; do
+    [[ "$u" == https://github.com/* ]] \
+      || die "origin must be an https://github.com/ URL (fetch and push, after insteadOf); got: $u"
+  done
+  fetch="${fetch%.git}"
+  echo "${fetch#https://github.com/}"
 }
 
 api() { # api METHOD PATH AUTH [BODY]

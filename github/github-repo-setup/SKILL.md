@@ -36,18 +36,18 @@ Each step ends when its check passes.
 1. **Level.** `SETUP level OWNER/REPO`. Done when you have reported the level to the captain.
 2. **Apps installed.** The two apps exist and are installed on this repo. If not, walk the captain through [`references/apps.md`](references/apps.md). Done when the captain confirms both apps list this repo under *Repository access*, and `SETUP secrets OWNER/REPO` reports all three reviewer credentials present.
 3. **Repo files on a branch.** On a branch named `chore/repo-setup`, add from `TEMPLATES`:
-   - `CODEOWNERS` → `.github/CODEOWNERS` (replace `@OWNER`)
+   - `CODEOWNERS` → `.github/CODEOWNERS` (replace `@OWNER`), adding every path whose code runs with the captain's credentials
    - `VISION.md` → repo root. Use the [`vision`](https://github.com/kunchenguid/vision) skill when it is installed; otherwise draft it from the README and history and put each section to the captain as a question. The review agent judges every PR against this file, so a vague vision is a weak reviewer.
    - `pr-policy.md` → `.github/pr-policy.md`
    - `SECURITY.md` → repo root
    - `dependabot.yml` → `.github/dependabot.yml`, adding the repo's package ecosystems
-   - `workflows/guard.yml` and `workflows/release.yml` → `.github/workflows/`, `releaserc.json` → `.releaserc.json`
+   - `workflows/guard.yml` and `workflows/release.yml` → `.github/workflows/`, `releaserc.json` → `.releaserc.json`, `release/` → `.github/release/` (pinned release tooling with its lockfile)
    - `../github-pr-review/templates/pr-review.yml` → `.github/workflows/pr-review.yml` and `../github-pr-review/SKILL.md` → `.github/pr-review/INSTRUCTIONS.md`
    - level `advisory` only: `workflows/main-audit.yml` → `.github/workflows/`
    - a `ci` job for this repo's own tests and lint, in `.github/workflows/ci.yml`, job `name: ci`. Read the repo's scripts and config to find the commands; ask the captain only when there are none.
    - a `LICENSE` if missing: ask the captain which.
 
-   Every `uses:` is pinned to a full commit SHA with the version in a comment. Done when `actionlint` passes locally (`docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint` or the binary) and the branch is pushed.
+   Templates say `main`: use the repo's default branch instead wherever they name a branch. Every `uses:` is pinned to a full commit SHA with the version in a comment. Done when `actionlint` passes locally (`docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint` or the binary) and the branch is pushed.
 4. **First PR.** Open it as the author app (see `github-pr-author`). Its title is `chore: protect main`. Done when every job in `guard.yml` and `ci.yml` has reported on it. The protection does not exist yet, so the captain reviews and merges this one by hand.
 5. **Settings.** `SETUP apply OWNER/REPO --checks ci,pr-title,gitleaks,actionlint`, adding `--beta` for repos with a beta channel. It sets merge options, Actions permissions, security features, labels, the `pr-review` environment and the ruleset, and reports anything it could not set. Done when `SETUP audit OWNER/REPO --checks …` exits 0.
 6. **Observe week.** Set the variable `PR_REVIEW_MODE` to `observe` in the `pr-review` environment. The reviewer comments *would approve* instead of approving, and the captain approves. After a week of PRs where its verdicts matched the captain's, the captain sets it to `enforce`.

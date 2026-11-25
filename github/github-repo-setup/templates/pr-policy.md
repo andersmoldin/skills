@@ -22,6 +22,10 @@ Label `needs-captain`, request the captain's review, and say why in one comment.
 5. is a breaking change (`!` or `BREAKING CHANGE`), which would release a new major version,
 6. is something the reviewer cannot judge with confidence after reading it, or the author and reviewer have gone two rounds without converging.
 
+PRs from forks and from Dependabot never reach the reviewer: the workflow labels them `needs-captain`.
+
+The captain answers an escalation by approving, by requesting changes, or by a comment starting with `@review` that states the decision; that comment re-runs the review.
+
 A risk classification never lowers these bars: a "low-risk" label on a change that hits any item above is still escalated.
 
 ## Repo-specific rules

@@ -17,14 +17,19 @@ jobs:
     name: main-audit
     runs-on: ubuntu-latest
     steps:
-      - name: Every commit on main arrived through a PR approved by someone other than its author
+      - name: Every commit on main arrived through an approved PR; protected paths approved by the captain
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           BRANCH: ${{ github.event.repository.default_branch }}
+          CAPTAIN: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
+          shopt -s extglob
           since=$(date -u -d '3 days ago' +%FT%TZ)
+          # CODEOWNERS paths -> shell patterns ("/.github/" -> ".github/*", "/VISION.md" -> "VISION.md")
+          mapfile -t owned < <(gh api "repos/$REPO/contents/.github/CODEOWNERS?ref=$BRANCH" --jq .content \
+            | base64 -d | grep -vE '^\s*(#|$)' | awk '{print $1}' | sed -E 's|^/||; s|/$|/*|')
           for sha in $(gh api "repos/$REPO/commits?sha=$BRANCH&since=$since&per_page=100" --jq '.[].sha'); do
             pr=$(gh api "repos/$REPO/commits/$sha/pulls" --jq '[.[] | select(.merged_at != null)][0].number // empty')
             problem=""
@@ -34,6 +39,19 @@ jobs:
               author=$(gh api "repos/$REPO/pulls/$pr" --jq .user.login)
               approvers=$(gh api "repos/$REPO/pulls/$pr/reviews" --jq "[.[] | select(.state == \"APPROVED\" and .user.login != \"$author\")] | length")
               [ "$approvers" -gt 0 ] || problem="merged in #$pr without approval from anyone but its author"
+              if [ -z "$problem" ]; then
+                touched=""
+                while read -r f; do
+                  for pat in "${owned[@]}"; do
+                    # shellcheck disable=SC2053 # pat is a glob on purpose
+                    [[ "$f" == $pat ]] && touched="$f"
+                  done
+                done < <(gh api "repos/$REPO/pulls/$pr/files" --paginate --jq '.[].filename')
+                if [ -n "$touched" ]; then
+                  captain=$(gh api "repos/$REPO/pulls/$pr/reviews" --jq "[.[] | select(.state == \"APPROVED\" and .user.login == \"$CAPTAIN\")] | length")
+                  [ "$captain" -gt 0 ] || problem="merged in #$pr touching protected path $touched without the captain's approval"
+                fi
+              fi
             fi
             [ -n "$problem" ] || continue
             short=${sha:0:7}

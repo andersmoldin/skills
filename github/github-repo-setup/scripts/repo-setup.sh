@@ -37,11 +37,16 @@ done
 # ---------- detection ----------
 
 level() {
-  local vis
-  vis=$(gh api "repos/$repo" --jq .visibility)
+  # Fail closed: only GitHub's plan-limit answer means advisory; any other error stops here.
+  local vis out
+  vis=$(gh api "repos/$repo" --jq .visibility) || die "cannot read $repo"
   if [[ "$vis" == "public" ]]; then echo enforced; return; fi
-  if gh api "repos/$repo/rulesets" >/dev/null 2>&1; then echo enforced; else echo advisory; fi
+  if out=$(gh api "repos/$repo/rulesets" 2>&1); then echo enforced; return; fi
+  if grep -q "Upgrade to GitHub Pro" <<<"$out"; then echo advisory; return; fi
+  die "cannot determine protection level for $repo: $out"
 }
+
+default_branch() { gh api "repos/$repo" --jq .default_branch; }
 
 ruleset_id() {
   gh api "repos/$repo/rulesets" --jq ".[] | select(.name == \"$RULESET_NAME\") | .id" 2>/dev/null || true
@@ -123,12 +128,13 @@ apply_settings() {
     jq -n '{deployment_branch_policy: {protected_branches: false, custom_branch_policies: true}}' \
       | gh api -X PUT "repos/$repo/environments/pr-review" --input - >/dev/null \
       && echo "ok   environment pr-review" || failed+=("environment")
+    local db; db=$(default_branch)
     if ! gh api "repos/$repo/environments/pr-review/deployment-branch-policies" \
-         --jq '.branch_policies[].name' | grep -qx main; then
+         --jq '.branch_policies[].name' | grep -qx "$db"; then
       gh api -X POST "repos/$repo/environments/pr-review/deployment-branch-policies" \
-        -f name=main -f type=branch >/dev/null || failed+=("environment branch policy")
+        -f name="$db" -f type=branch >/dev/null || failed+=("environment branch policy")
     fi
-    echo "ok   pr-review secrets usable from main only"
+    echo "ok   pr-review secrets usable from $db only (audit flags any other policy)"
 
     local id body; id=$(ruleset_id); body=$(desired_ruleset)
     if [[ -n "$id" ]]; then
@@ -170,6 +176,14 @@ audit() {
   gh api "repos/$repo/labels/$LABEL" >/dev/null 2>&1 || drift+=("label $LABEL missing")
 
   if [[ "$lvl" == "enforced" ]]; then
+    local policies repo_secrets
+    policies=$(gh api "repos/$repo/environments/pr-review/deployment-branch-policies" \
+      --jq '[.branch_policies[].name] | sort | join(",")' 2>/dev/null || echo "missing")
+    [[ "$policies" == "$(default_branch)" ]] || drift+=("pr-review environment branches: $policies (want only the default branch)")
+    repo_secrets=$(gh api "repos/$repo/actions/secrets" --jq '.secrets[].name')
+    for s in PR_REVIEW_APP_PRIVATE_KEY CLAUDE_CODE_OAUTH_TOKEN; do
+      grep -qx "$s" <<<"$repo_secrets" && drift+=("$s is a REPO secret: any branch workflow can read it; delete it, keep only the environment copy")
+    done
     local id; id=$(ruleset_id)
     if [[ -z "$id" ]]; then
       drift+=("ruleset $RULESET_NAME missing")
@@ -190,7 +204,8 @@ audit() {
   local branch; branch=$(gh api "repos/$repo" --jq .default_branch)
   local files=(.github/CODEOWNERS VISION.md SECURITY.md .github/pr-policy.md .github/dependabot.yml
                .github/workflows/guard.yml .github/workflows/release.yml .github/workflows/pr-review.yml
-               .github/workflows/ci.yml .github/pr-review/INSTRUCTIONS.md .releaserc.json LICENSE)
+               .github/workflows/ci.yml .github/pr-review/INSTRUCTIONS.md .releaserc.json
+               .github/release/package-lock.json LICENSE)
   [[ "$lvl" == "advisory" ]] && files+=(.github/workflows/main-audit.yml)
   for f in "${files[@]}"; do
     gh api "repos/$repo/contents/$f?ref=$branch" >/dev/null 2>&1 || drift+=("file missing: $f")
@@ -244,15 +259,20 @@ set_enforcement() {
 emergency_off() {
   [[ -n "$reason" ]] || die "give a reason: emergency-off OWNER/REPO \"reason\""
   [[ -n "$(ruleset_id)" ]] || die "no ruleset $RULESET_NAME on $repo"
-  local who; who=$(gh api user --jq .login)
+  local who url; who=$(gh api user --jq .login)
+  gh api "repos/$repo/labels/$LABEL" >/dev/null 2>&1 \
+    || gh api -X POST "repos/$repo/labels" -f name="$LABEL" -f color=d93f0b >/dev/null
   # the log issue comes first, so protection is never off without a record
-  gh issue create -R "$repo" --title "$EMERGENCY_TITLE" --label "$LABEL" \
+  url=$(gh issue create -R "$repo" --title "$EMERGENCY_TITLE" --label "$LABEL" \
     --body "Ruleset \`$RULESET_NAME\` disabled by @$who at $(date -u +%FT%TZ).
 
 Reason: $reason
 
-Re-enable with \`repo-setup.sh emergency-on $repo\`. This issue closes when protection is back."
-  set_enforcement disabled
+Re-enable with \`repo-setup.sh emergency-on $repo\`. This issue closes when protection is back.")
+  if ! set_enforcement disabled; then
+    gh issue close -R "$repo" "$url" --comment "Disabling FAILED; protection is still on." >/dev/null
+    die "could not disable the ruleset; protection is still on"
+  fi
   echo "PROTECTION IS OFF for $repo. Run emergency-on when the fix has landed."
 }
 
