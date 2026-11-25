@@ -1,0 +1,5 @@
+# Protected paths: changes here need the captain's approval.
+# 1. Files that define how this repo is checked, so an agent cannot change its own checks.
+# 2. Code that runs with the captain's credentials (admin gh login, keychain): add its paths here.
+/.github/   @OWNER
+/VISION.md  @OWNER

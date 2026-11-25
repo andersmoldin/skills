@@ -15,12 +15,16 @@ A change it has read in full that:
 
 Label `needs-captain`, request the captain's review, and say why in one comment. Escalate when the change:
 
-1. touches a protected path (`/.github/`, `/VISION.md`); CODEOWNERS enforces this too,
+1. touches a protected path (`/.github/`, `/VISION.md`, `/github/*/scripts/`); CODEOWNERS enforces this too,
 2. changes a default or other existing behaviour users rely on, even when it looks like an improvement,
 3. contains or exposes a secret, token, key, password, personal data or other sensitive information the captain has not explicitly approved,
 4. sits outside `VISION.md`, or the vision does not settle it,
 5. is a breaking change (`!` or `BREAKING CHANGE`), which would release a new major version,
 6. is something the reviewer cannot judge with confidence after reading it, or the author and reviewer have gone two rounds without converging.
+
+PRs from forks and from Dependabot never reach the reviewer: the workflow labels them `needs-captain`.
+
+The captain answers an escalation by approving, by requesting changes, or by a comment starting with `@review` that states the decision; that comment re-runs the review.
 
 A risk classification never lowers these bars: a "low-risk" label on a change that hits any item above is still escalated.
 

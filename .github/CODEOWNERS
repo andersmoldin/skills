@@ -1,4 +1,6 @@
 # Protected paths: changes here need the captain's approval.
-# They define how this repo is checked, so an agent must not be able to change them alone.
+# They define how this repo is checked, or run with the captain's credentials, so an agent
+# must not be able to change them alone.
 /.github/   @andersmoldin
 /VISION.md  @andersmoldin
+/github/*/scripts/  @andersmoldin
