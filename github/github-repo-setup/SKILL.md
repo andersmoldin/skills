@@ -22,10 +22,14 @@ Main accepts only squash-merged PRs with one approval from someone other than th
 
 ## Protection level
 
-Run `SETUP level OWNER/REPO` first. It prints one of:
+Run `SETUP level OWNER/REPO` first. Its first line is one of:
 
 - `enforced`: public repo, or private on a paid plan. GitHub refuses rule violations.
-- `advisory`: private repo on GitHub Free. Rulesets, CODEOWNERS enforcement, auto-merge and environments do not exist there. Everything else still applies, plus the daily `main-audit` workflow that flags commits on main which did not arrive through an approved PR. Say **advisory** to the captain in plain words every time you report on such a repo: the rules hold against agent mistakes, and nothing on GitHub's side stops a bypass.
+- `advisory`: private repo on GitHub Free. Rulesets, CODEOWNERS enforcement, auto-merge and environments do not exist there. Everything else still applies, plus the daily `main-audit` workflow that flags commits on main which did not arrive through an approved PR.
+
+Every time you report on an advisory repo, tell the captain, in these words: **Main is NOT protected. Anyone with write access, including an agent on your login, can push to main. main-audit detects it afterwards; nothing prevents it.** `level` and `apply` print the same text.
+
+GitHub's banner "Your main branch isn't protected" is expected at advisory level; its button leads to an upgrade.
 
 The level is detected, never assumed. When the plan changes, rerun the skill.
 
@@ -33,7 +37,10 @@ The level is detected, never assumed. When the plan changes, rerun the skill.
 
 Each step ends when its check passes.
 
-1. **Level.** `SETUP level OWNER/REPO`. Done when you have reported the level to the captain.
+1. **Level.** `SETUP level OWNER/REPO`. On `enforced`, done when you have reported the level to the captain. On `advisory`, stop here: report it in the words above and put three paths to the captain. Continue only after the captain chooses one.
+   - **Make the repo public.** First offer to check what going public would expose. If the captain accepts, run `gitleaks git --log-opts=--all --redact` in a fresh clone, then read the full history (`git log --all -p`), the commit author and committer lines, and the repo's issues and PR text, and list everything that points at private infrastructure or people: hostnames, IP addresses, e-mail addresses, names, home-directory paths. The captain then changes the visibility in GitHub themselves (*Settings* → *General* → *Danger Zone* → *Change repository visibility*). Then run `SETUP level OWNER/REPO` again.
+   - **A paid GitHub plan** (Pro or higher, see [GitHub's pricing page](https://github.com/pricing)). After the captain upgrades, run `SETUP level OWNER/REPO` again.
+   - **Keep advisory.** Go on with step 2. The choice is not stored in the repo.
 2. **Apps installed.** The two apps exist and are installed on this repo. If not, walk the captain through [`references/apps.md`](references/apps.md). Done when the captain confirms both apps list this repo under *Repository access*, and `SETUP secrets OWNER/REPO` reports all three reviewer credentials present.
 3. **Repo files on a branch.** On a branch named `chore/repo-setup`, add from `TEMPLATES`:
    - `CODEOWNERS` → `.github/CODEOWNERS` (replace `@OWNER`), adding every path whose code runs with the captain's credentials
@@ -54,7 +61,7 @@ Each step ends when its check passes.
 
 ## Audit and adjust
 
-`SETUP audit OWNER/REPO --checks …` compares live settings, ruleset and files with this skill and exits non-zero on any drift, listing each item. Fix drift by rerunning `apply` for settings, and by a PR for files: a file that differs from its template is either a deliberate local change (record why in the PR that made it) or stale (update it from the template).
+`SETUP audit OWNER/REPO --checks …` compares live settings, ruleset and files with this skill and exits non-zero on any drift, listing each item. On an advisory repo it also prints `main not protected (advisory)` and still exits 0 when nothing else drifts. For a repo that is already set up, that line is the reminder: do not put the three paths of step 1 to the captain again. Fix drift by rerunning `apply` for settings, and by a PR for files: a file that differs from its template is either a deliberate local change (record why in the PR that made it) or stale (update it from the template).
 
 ## Variants
 
