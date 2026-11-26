@@ -27,9 +27,11 @@ Run `SETUP level OWNER/REPO` first. Its first line is one of:
 - `enforced`: public repo, or private on a paid plan. GitHub refuses rule violations.
 - `advisory`: private repo on GitHub Free. Rulesets, CODEOWNERS enforcement, auto-merge and environments do not exist there. Everything else still applies, plus the daily `main-audit` workflow that flags commits on main which did not arrive through an approved PR.
 
-Every time you report on an advisory repo, tell the captain, in these words: **Main is NOT protected. Anyone with write access, including an agent on your login, can push to main. main-audit detects it afterwards; nothing prevents it.** `level` and `apply` print the same text.
+Every time you report on an advisory repo, tell the captain, in these words: **Main is NOT protected. Anyone with write access, including an agent on your login, can push to main. main-audit detects it afterwards; nothing prevents it.**
 
 GitHub's banner "Your main branch isn't protected" is expected at advisory level; its button leads to an upgrade.
+
+`level` and `apply` print both sentences.
 
 The level is detected, never assumed. When the plan changes, rerun the skill.
 
@@ -37,7 +39,7 @@ The level is detected, never assumed. When the plan changes, rerun the skill.
 
 Each step ends when its check passes.
 
-1. **Level.** `SETUP level OWNER/REPO`. On `enforced`, done when you have reported the level to the captain. On `advisory`, stop here: report it in the words above and put three paths to the captain. Continue only after the captain chooses one.
+1. **Level.** `SETUP level OWNER/REPO`. On `enforced`, done when you have reported the level to the captain. On `advisory`, stop here: report it in the words above and put three paths to the captain. Continue only after the captain chooses one. A repo that is already set up is not asked again: rerunning the skill on it, report the level and go on (see *Audit and adjust*).
    - **Make the repo public.** First offer to check what going public would expose. If the captain accepts, run `gitleaks git --log-opts=--all --redact` in a fresh clone, then read the full history (`git log --all -p`), the commit author and committer lines, and the repo's issues and PR text, and list everything that points at private infrastructure or people: hostnames, IP addresses, e-mail addresses, names, home-directory paths. The captain then changes the visibility in GitHub themselves (*Settings* → *General* → *Danger Zone* → *Change repository visibility*). Then run `SETUP level OWNER/REPO` again.
    - **A paid GitHub plan** (Pro or higher, see [GitHub's pricing page](https://github.com/pricing)). After the captain upgrades, run `SETUP level OWNER/REPO` again.
    - **Keep advisory.** Go on with step 2. The choice is not stored in the repo.

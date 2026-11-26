@@ -46,13 +46,18 @@ level() {
   die "cannot determine protection level for $repo: $out"
 }
 
-# What advisory means, in the words the captain reads; printed by level and apply.
+# What advisory means, in the words the captain reads (SKILL.md quotes the same text).
 advisory_notice() {
   cat <<'EOF'
 Main is NOT protected. Anyone with write access, including an agent on your login, can push to main. main-audit detects it afterwards; nothing prevents it.
-GitHub's banner "Your main branch isn't protected" is expected at this level; its button leads to an upgrade.
-To protect main: make the repo public, or move to a paid GitHub plan (Pro or higher, https://github.com/pricing). Then run level again.
+GitHub's banner "Your main branch isn't protected" is expected at advisory level; its button leads to an upgrade.
 EOF
+}
+
+level_cmd() {
+  local lvl; lvl=$(level)
+  echo "$lvl"
+  [[ "$lvl" != "advisory" ]] || advisory_notice
 }
 
 default_branch() { gh api "repos/$repo" --jq .default_branch; }
@@ -300,7 +305,7 @@ emergency_on() {
 }
 
 case "$cmd" in
-  level) lvl=$(level); echo "$lvl"; [[ "$lvl" != "advisory" ]] || advisory_notice ;;
+  level) level_cmd ;;
   secrets) secrets ;;
   apply) apply_settings ;;
   audit) audit ;;
