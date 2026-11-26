@@ -46,6 +46,20 @@ level() {
   die "cannot determine protection level for $repo: $out"
 }
 
+# What advisory means, in the words the captain reads (SKILL.md quotes the same text).
+advisory_notice() {
+  cat <<'EOF'
+Main is NOT protected. Anyone with write access, including an agent on your login, can push to main. main-audit detects it afterwards; nothing prevents it.
+GitHub's banner "Your main branch isn't protected" is expected at advisory level; its button leads to an upgrade.
+EOF
+}
+
+level_cmd() {
+  local lvl; lvl=$(level)
+  echo "$lvl"
+  [[ "$lvl" != "advisory" ]] || advisory_notice
+}
+
 default_branch() { gh api "repos/$repo" --jq .default_branch; }
 
 ruleset_id() {
@@ -145,8 +159,9 @@ apply_settings() {
         && echo "ok   ruleset created" || failed+=("ruleset")
     fi
   else
-    echo "skip ruleset, environment, auto-merge: ADVISORY level, nothing on GitHub enforces the rules"
+    echo "skip ruleset, environment, auto-merge: not available at advisory level"
     echo "     reviewer secrets go in repo secrets instead of the pr-review environment"
+    advisory_notice
   fi
 
   if [[ ${#failed[@]} -gt 0 ]]; then
@@ -220,6 +235,9 @@ audit() {
       done || true)
   [[ -z "$unpinned" ]] || drift+=("unpinned actions: $unpinned")
 
+  # Not drift: the plan, not the settings, decides this, so it does not fail the audit.
+  [[ "$lvl" == "advisory" ]] && echo "main not protected (advisory)"
+
   if [[ ${#drift[@]} -eq 0 ]]; then
     echo "no drift"
   else
@@ -287,7 +305,7 @@ emergency_on() {
 }
 
 case "$cmd" in
-  level) level ;;
+  level) level_cmd ;;
   secrets) secrets ;;
   apply) apply_settings ;;
   audit) audit ;;
