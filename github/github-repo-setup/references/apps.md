@@ -9,7 +9,7 @@ App names are global on GitHub, so prefix them with your handle: `HANDLE-pr-auth
 | `HANDLE-pr-author` | Contents: write, Pull requests: write, Workflows: write, Checks: read, Actions: read | Agent Vault; macOS keychain until Agent Vault exists |
 | `HANDLE-pr-review` | Contents: write, Pull requests: write, Checks: read, Actions: read | the repo's `pr-review` environment (repo secrets on ADVISORY repos) |
 
-The review app needs Contents: **write** although it never pushes: GitHub counts an approval toward the ruleset only from a reviewer with write access (verified on andersmoldin/skills#22, where the same approval with Contents: read left the PR at *review required*). Its key stays usable only from the default branch, and the reviewer has no tool that pushes.
+The review app needs Contents: **write**: GitHub counts an approval toward the ruleset only from a reviewer with write access (verified on andersmoldin/skills#22, where the same approval with Contents: read left the PR at *review required*), and on ADVISORY repos the workflow's merge job merges with it. On ENFORCED repos its key is usable only from the default branch; on ADVISORY repos it is a repo secret, which a workflow on any branch can read, as nothing protects main there anyway. The review agent has no tool that pushes or merges; the merge job runs only `merge.sh` from the default branch. Without Workflows permission the app could not merge a change to `.github/workflows/`, and `merge.sh` leaves every protected path to the captain anyway.
 
 Webhooks off, installable only on the owner's account. Neither app has Administration permission, so neither can change rulesets or settings.
 

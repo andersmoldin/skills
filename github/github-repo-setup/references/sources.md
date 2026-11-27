@@ -19,6 +19,7 @@ Sources:
 | No bypass actors | An exception for the owner is an exception for anything running as the owner; emergencies use the logged switch instead | SCM (limit who can bypass), local |
 | Squash only, linear history | One commit per PR, titled by the PR, which drives the version | local (convention) |
 | Auto-merge, delete branch after merge | Approved and green means merged, with no manual step | local (convenience) |
+| Advisory: auto-merge off, the review app merges after its approval | Auto-merge waits only for what GitHub enforces, so without rules it merges before the review; the app merges only the commit it approved, with every check passed, no protected path and no unanswered escalation | local |
 | `GITHUB_TOKEN` read-only by default | A workflow gets write access only where it asks for it | SC Token-Permissions, SCM, GH |
 | Actions cannot approve PRs | `GITHUB_TOKEN` must not satisfy the review requirement | SCM, GH |
 | Actions pinned to full commit SHA | A moved tag cannot change what runs | SC Pinned-Dependencies, GH |

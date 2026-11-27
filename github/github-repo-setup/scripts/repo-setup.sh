@@ -85,7 +85,8 @@ desired_ruleset() {
 }
 
 desired_repo_settings() {
-  # auto-merge needs branch protection, which advisory repos lack
+  # Auto-merge waits only for what GitHub enforces. Advisory repos enforce no review, so it would merge at
+  # once; there the review app merges what it approves instead (github-pr-review merge.sh).
   local lvl="$1"
   jq -n --argjson beta "$beta" --arg lvl "$lvl" '{
     allow_squash_merge: true,
@@ -93,8 +94,9 @@ desired_repo_settings() {
     allow_rebase_merge: false,
     delete_branch_on_merge: true,
     squash_merge_commit_title: "PR_TITLE",
-    squash_merge_commit_message: "PR_BODY"
-  } + (if $lvl == "enforced" then {allow_auto_merge: true} else {} end)'
+    squash_merge_commit_message: "PR_BODY",
+    allow_auto_merge: ($lvl == "enforced")
+  }'
 }
 
 # ---------- apply ----------
@@ -159,7 +161,8 @@ apply_settings() {
         && echo "ok   ruleset created" || failed+=("ruleset")
     fi
   else
-    echo "skip ruleset, environment, auto-merge: not available at advisory level"
+    echo "skip ruleset, environment: not available at advisory level"
+    echo "     auto-merge off: the review app merges what it approves (enforce mode); the captain merges the rest"
     echo "     reviewer secrets go in repo secrets instead of the pr-review environment"
     advisory_notice
   fi
@@ -219,7 +222,7 @@ audit() {
   local branch; branch=$(gh api "repos/$repo" --jq .default_branch)
   local files=(.github/CODEOWNERS VISION.md SECURITY.md .github/pr-policy.md .github/dependabot.yml
                .github/workflows/guard.yml .github/workflows/release.yml .github/workflows/pr-review.yml
-               .github/workflows/ci.yml .github/pr-review/INSTRUCTIONS.md .releaserc.json
+               .github/workflows/ci.yml .github/pr-review/INSTRUCTIONS.md .github/pr-review/merge.sh .releaserc.json
                .github/release/package-lock.json LICENSE)
   [[ "$lvl" == "advisory" ]] && files+=(.github/workflows/main-audit.yml)
   for f in "${files[@]}"; do
