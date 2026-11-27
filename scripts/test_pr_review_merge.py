@@ -2,7 +2,6 @@
 """Tests for github-pr-review's merge.sh: when the review app merges what it approved. GitHub is faked
 (fakegh.py). Run: python3 -m unittest discover -s scripts"""
 import copy
-import os
 import pathlib
 import shutil
 import subprocess
@@ -28,12 +27,13 @@ def approved_pr() -> dict:
             f"GET repos/{REPO}/rules/branches/main": ADVISORY,
             f"GET repos/{REPO}/pulls/{PR}/reviews?per_page=100": {"body": [
                 {"user": {"login": BOT}, "state": "APPROVED", "commit_id": SHA, "submitted_at": "2026-11-27T10:05:00Z"}]},
-            f"GET repos/{REPO}/issues/{PR}/comments?since={SINCE}&per_page=100": {"body": []},
+            f"GET repos/{REPO}/issues/{PR}/comments?per_page=100": {"body": []},
             f"GET repos/{REPO}/pulls/{PR}/files?per_page=100": {"body": [{"filename": "src/app.py"}]},
         },
         "checks": {"body": [
             {"name": "ci", "bucket": "pass", "workflow": "ci"},
             {"name": "gitleaks", "bucket": "pass", "workflow": "guard"},
+            {"name": "pr-title", "bucket": "pass", "workflow": "guard"},
             {"name": "merge", "bucket": "pending", "workflow": "pr-review"},
         ]},
     }
@@ -55,7 +55,7 @@ class Merge(unittest.TestCase):
         self.addCleanup(self.gh.cleanup)
         environment = {**self.gh.env, "HOME": str(self.work), "GH_REPO": REPO, "PR": PR, "SHA": SHA,
                        "SINCE": SINCE, "BOT": BOT, "CAPTAIN": CAPTAIN, "MODE": self.mode,
-                       "GITHUB_WORKFLOW": "pr-review", "WAIT_SECONDS": "0", "POLL_SECONDS": "0", **env}
+                       "GITHUB_WORKFLOW": "pr-review", "REQUIRED_CHECKS": "ci,pr-title", "WAIT_SECONDS": "0", "POLL_SECONDS": "0", **env}
         return subprocess.run(["bash", str(SCRIPT)], cwd=self.work, env=environment, capture_output=True, text=True)
 
     def merges(self) -> list[list[str]]:
@@ -160,14 +160,14 @@ class Merge(unittest.TestCase):
 
     def test_stops_when_the_captain_says_stop(self):
         scenario = approved_pr()
-        scenario["api"][f"GET repos/{REPO}/issues/{PR}/comments?since={SINCE}&per_page=100"]["body"] = [
-            {"user": {"login": CAPTAIN}, "body": "@agent stop, I am rethinking this"}]
+        scenario["api"][f"GET repos/{REPO}/issues/{PR}/comments?per_page=100"]["body"] = [
+            {"user": {"login": CAPTAIN}, "body": "@agent stop, I am rethinking this", "created_at": "2026-11-27T10:03:00Z"}]
         self.assert_skipped(self.run_merge(scenario))
 
     def test_a_stop_word_quoted_by_someone_else_changes_nothing(self):
         scenario = approved_pr()
-        scenario["api"][f"GET repos/{REPO}/issues/{PR}/comments?since={SINCE}&per_page=100"]["body"] = [
-            {"user": {"login": "mallory"}, "body": "@agent stop"}]
+        scenario["api"][f"GET repos/{REPO}/issues/{PR}/comments?per_page=100"]["body"] = [
+            {"user": {"login": "mallory"}, "body": "@agent stop", "created_at": "2026-11-27T10:03:00Z"}]
         self.assertEqual(self.run_merge(scenario).returncode, 0)
         self.assertEqual(len(self.merges()), 1)
 
@@ -183,7 +183,7 @@ class Merge(unittest.TestCase):
 
     def test_a_failed_read_never_merges(self):
         for endpoint in (f"GET repos/{REPO}/pulls/{PR}/reviews?per_page=100",
-                         f"GET repos/{REPO}/issues/{PR}/comments?since={SINCE}&per_page=100",
+                         f"GET repos/{REPO}/issues/{PR}/comments?per_page=100",
                          f"GET repos/{REPO}/pulls/{PR}/files?per_page=100"):
             with self.subTest(endpoint):
                 scenario = approved_pr()
@@ -191,6 +191,13 @@ class Merge(unittest.TestCase):
                 result = self.run_merge(scenario)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(self.merges(), [])
+
+    def test_a_file_list_it_cannot_read_never_merges(self):
+        scenario = approved_pr()
+        scenario["api"][f"GET repos/{REPO}/pulls/{PR}/files?per_page=100"]["body"] = ["src/app.py"]
+        result = self.run_merge(scenario)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.merges(), [])
 
     def test_holds_a_pr_that_touches_a_protected_path(self):
         for name, owners, files in (
@@ -200,6 +207,7 @@ class Merge(unittest.TestCase):
                 ("directory without slash", "/scripts @o\n", [{"filename": "scripts/run.sh"}]),
                 ("at any depth", "secrets/ @o\n", [{"filename": "app/secrets/key.txt"}]),
                 ("last line without newline", "/README.md @o\n/VISION.md @o", [{"filename": "VISION.md"}]),
+                ("any directory, including the root", "**/secrets @o\n", [{"filename": "secrets"}]),
                 ("indented, with a comment after it", "  /VISION.md  @o  # the vision\n", [{"filename": "VISION.md"}]),
                 ("moved out of it", "/.github/ @o\n", [{"filename": "ci.yml", "previous_filename": ".github/workflows/ci.yml"}])):
             with self.subTest(name):
@@ -281,6 +289,49 @@ class Merge(unittest.TestCase):
         scenario["api"][f"GET repos/{REPO}/pulls/{PR}"] = [open_pr, open_pr, pushed]
         scenario["checks"] = {"body": [{"name": "ci", "bucket": "pending", "workflow": "ci"}]}
         self.assert_skipped(self.run_merge(scenario, WAIT_SECONDS="60"))
+
+    def test_waits_for_a_required_check_that_has_not_reported_yet(self):
+        scenario = approved_pr()
+        passed = scenario["checks"]
+        missing_ci = copy.deepcopy(passed)
+        missing_ci["body"] = [c for c in missing_ci["body"] if c["name"] != "ci"]
+        scenario["checks"] = [missing_ci, passed]
+        self.assertEqual(self.run_merge(scenario, WAIT_SECONDS="60").returncode, 0)
+        self.assertEqual(len(self.merges()), 1)
+        scenario["checks"] = missing_ci
+        self.assert_held(self.run_merge(scenario), "not reported: ci")
+
+    def test_names_the_error_when_the_checks_cannot_be_read(self):
+        scenario = approved_pr()
+        scenario["checks"] = {"status": 401, "body": {"message": "Bad credentials"}}
+        self.assert_held(self.run_merge(scenario), "Bad credentials")
+
+    def escalated(self, *captain_answer: dict) -> dict:
+        """The reviewer escalated in an earlier run; this run approved a later push."""
+        scenario = approved_pr()
+        scenario["api"][f"GET repos/{REPO}/issues/{PR}/comments?per_page=100"]["body"] = [
+            {"user": {"login": BOT}, "body": "<!-- needs-captain -->\nchanges a default", "created_at": "2026-11-27T09:00:00Z"},
+            *captain_answer]
+        return scenario
+
+    def test_holds_an_escalated_pr_until_the_captain_has_decided(self):
+        self.assert_held(self.run_merge(self.escalated()), "escalated")
+
+    def test_an_answer_from_before_the_escalation_does_not_count(self):
+        scenario = self.escalated({"user": {"login": CAPTAIN}, "body": "@review ok", "created_at": "2026-11-27T08:00:00Z"})
+        self.assert_held(self.run_merge(scenario), "escalated")
+
+    def test_merges_an_escalated_pr_once_the_captain_has_answered(self):
+        for name, comment, review in (
+                ("@review comment", {"user": {"login": CAPTAIN}, "body": "@review fine, go ahead", "created_at": "2026-11-27T09:30:00Z"}, None),
+                ("approval", None, {"user": {"login": CAPTAIN}, "state": "APPROVED", "commit_id": "c" * 40, "submitted_at": "2026-11-27T09:30:00Z"})):
+            with self.subTest(name):
+                scenario = self.escalated(*([comment] if comment else []))
+                if review:
+                    scenario["api"][f"GET repos/{REPO}/pulls/{PR}/reviews?per_page=100"]["body"].insert(0, review)
+                result = self.run_merge(scenario)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(len(self.merges()), 1)
 
     def test_says_so_when_github_refuses_the_merge(self):
         scenario = approved_pr()

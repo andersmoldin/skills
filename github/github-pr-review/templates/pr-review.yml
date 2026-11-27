@@ -9,7 +9,8 @@ name: pr-review
 #   strangers can steer an agent, and GitHub withholds secrets from Dependabot runs.
 # - The captain re-runs a review by commenting "@review ..."; the comment is a decision.
 # - Where GitHub enforces no review (private repos on GitHub Free), the merge job merges what the
-#   reviewer approved, once every check has passed; never protected paths. Elsewhere auto-merge does.
+#   reviewer approved, once every check has passed; never protected paths, never an escalation the
+#   captain has not answered. Elsewhere auto-merge does.
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -175,7 +176,7 @@ jobs:
       cancel-in-progress: true
     runs-on: ubuntu-latest
     environment: pr-review
-    timeout-minutes: 30 # merge.sh waits up to 20 minutes for checks still running
+    timeout-minutes: 30 # above WAIT_SECONDS below
     permissions:
       contents: read
     steps:
@@ -201,5 +202,8 @@ jobs:
           SINCE: ${{ needs.review.outputs.since }}
           BOT: ${{ steps.app.outputs.app-slug }}[bot]
           CAPTAIN: ${{ github.repository_owner }}
-          MODE: ${{ vars.PR_REVIEW_MODE }}
+          MODE: ${{ vars.PR_REVIEW_MODE == 'enforce' && 'enforce' || 'observe' }}
+          # The required checks (github-repo-setup's --checks): each must report and pass before a merge.
+          REQUIRED_CHECKS: ci,pr-title,gitleaks,actionlint
+          WAIT_SECONDS: 1200 # for checks still running when the review ends
         run: bash .github/pr-review/merge.sh # bash, so the copy needs no executable bit

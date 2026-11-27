@@ -12,7 +12,7 @@ You are the **author**: you write the change and open the pull request. A separa
 ## Steps
 
 1. **Branch.** Work on a branch off the default branch, named `<type>/<short-topic>` (`fix/token-refresh`). Done when `git branch --show-current` is not the default branch.
-2. **Validate before pushing.** A small, straightforward change (a typo, a one-line fix, a doc tweak) needs only the repo's tests and lint passing. For anything larger, if `no-mistakes` is set up in this repo, run it through `AS_AUTHOR` with the captain's request as the intent; it reviews, tests, pushes and opens the PR, and you continue at step 5. Otherwise run the repo's own tests and lint until they pass. Done when they pass.
+2. **Validate before pushing.** A small, straightforward change (a typo, a one-line fix, a doc tweak) needs only the repo's tests and lint passing. For anything larger, if `no-mistakes` is set up in this repo, run it through `AS_AUTHOR` with the captain's request as the intent; it reviews, tests, pushes and opens the PR, and you continue at step 6. Otherwise run the repo's own tests and lint until they pass. Done when they pass.
 3. **Title.** Conventional Commits. It becomes the squash commit and decides the next version:
    - `fix:`, `docs:`, `refactor:`, `chore:`, `ci:`, `test:`, `perf:`, `build:` → patch. The default.
    - `feat:` → minor. Only when the captain asked for a new capability or a minor release.

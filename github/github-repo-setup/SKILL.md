@@ -25,7 +25,7 @@ Main accepts only squash-merged PRs with one approval from someone other than th
 Run `SETUP level OWNER/REPO` first. Its first line is one of:
 
 - `enforced`: public repo, or private on a paid plan. GitHub refuses rule violations.
-- `advisory`: private repo on GitHub Free. Rulesets, CODEOWNERS enforcement and environments do not exist there. Auto-merge stays off: with nothing enforced it merges before any review. The review app merges what it approves instead, in enforce mode only, once every check has passed, and never a change to a protected path. Everything else still applies, plus the daily `main-audit` workflow that flags commits on main which did not arrive through an approved PR.
+- `advisory`: private repo on GitHub Free. Rulesets, CODEOWNERS enforcement and environments do not exist there. Auto-merge stays off: with nothing enforced it merges before any review. The review app merges what it approves instead, in enforce mode only, once every check has passed; never a change to a protected path, and never an escalated PR before the captain has answered. Everything else still applies, plus the daily `main-audit` workflow that flags commits on main which did not arrive through an approved PR.
 
 Every time you report on an advisory repo, tell the captain, in these words: **Main is NOT protected. Anyone with write access, including an agent on your login, can push to main. main-audit detects it afterwards; nothing prevents it.**
 
@@ -51,7 +51,7 @@ Each step ends when its check passes.
    - `SECURITY.md` → repo root
    - `dependabot.yml` → `.github/dependabot.yml`, adding the repo's package ecosystems
    - `workflows/guard.yml` and `workflows/release.yml` → `.github/workflows/`, `releaserc.json` → `.releaserc.json`, `release/` → `.github/release/` (pinned release tooling with its lockfile)
-   - `../github-pr-review/templates/pr-review.yml` → `.github/workflows/pr-review.yml`, `../github-pr-review/SKILL.md` → `.github/pr-review/INSTRUCTIONS.md` and `../github-pr-review/templates/merge.sh` → `.github/pr-review/merge.sh`
+   - `../github-pr-review/templates/pr-review.yml` → `.github/workflows/pr-review.yml`, `../github-pr-review/SKILL.md` → `.github/pr-review/INSTRUCTIONS.md` and `../github-pr-review/templates/merge.sh` → `.github/pr-review/merge.sh`; keep `REQUIRED_CHECKS` in `pr-review.yml` equal to the `--checks` of step 5
    - level `advisory` only: `workflows/main-audit.yml` → `.github/workflows/`
    - a `ci` job for this repo's own tests and lint, in `.github/workflows/ci.yml`, job `name: ci`. Read the repo's scripts and config to find the commands; ask the captain only when there are none.
    - a `LICENSE` if missing: ask the captain which.
