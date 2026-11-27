@@ -16,7 +16,7 @@ You are acting for the **captain**: the repo owner, whose own account is the onl
 |---|---|---|
 | Captain (owner account) | browser, admin | approves **protected files** and escalations |
 | Author app (`<handle>-pr-author`) | key in Agent Vault (keychain until then) | nothing alone: pushes branches, opens PRs |
-| Review app (`<handle>-pr-review`) | key in the `pr-review` environment, locked to `main` | approves ordinary changes |
+| Review app (`<handle>-pr-review`) | key in the `pr-review` environment, locked to `main` | approves ordinary changes; on advisory repos also merges them |
 
 Main accepts only squash-merged PRs with one approval from someone other than the last pusher, green required checks, resolved threads, and code-owner approval for protected paths (`/.github/`, `/VISION.md`, and code that runs with the captain's credentials). No bypass actors, ever. Why each rule exists, and its source: [`references/sources.md`](references/sources.md).
 
@@ -25,7 +25,7 @@ Main accepts only squash-merged PRs with one approval from someone other than th
 Run `SETUP level OWNER/REPO` first. Its first line is one of:
 
 - `enforced`: public repo, or private on a paid plan. GitHub refuses rule violations.
-- `advisory`: private repo on GitHub Free. Rulesets, CODEOWNERS enforcement, auto-merge and environments do not exist there. Everything else still applies, plus the daily `main-audit` workflow that flags commits on main which did not arrive through an approved PR.
+- `advisory`: private repo on GitHub Free. Rulesets, CODEOWNERS enforcement and environments do not exist there. Auto-merge stays off: with nothing enforced it merges before any review. The review app merges what it approves instead, in enforce mode only, once every check has passed, and never a change to a protected path. Everything else still applies, plus the daily `main-audit` workflow that flags commits on main which did not arrive through an approved PR.
 
 Every time you report on an advisory repo, tell the captain, in these words: **Main is NOT protected. Anyone with write access, including an agent on your login, can push to main. main-audit detects it afterwards; nothing prevents it.**
 
@@ -51,7 +51,7 @@ Each step ends when its check passes.
    - `SECURITY.md` → repo root
    - `dependabot.yml` → `.github/dependabot.yml`, adding the repo's package ecosystems
    - `workflows/guard.yml` and `workflows/release.yml` → `.github/workflows/`, `releaserc.json` → `.releaserc.json`, `release/` → `.github/release/` (pinned release tooling with its lockfile)
-   - `../github-pr-review/templates/pr-review.yml` → `.github/workflows/pr-review.yml` and `../github-pr-review/SKILL.md` → `.github/pr-review/INSTRUCTIONS.md`
+   - `../github-pr-review/templates/pr-review.yml` → `.github/workflows/pr-review.yml`, `../github-pr-review/SKILL.md` → `.github/pr-review/INSTRUCTIONS.md` and `../github-pr-review/templates/merge.sh` → `.github/pr-review/merge.sh`
    - level `advisory` only: `workflows/main-audit.yml` → `.github/workflows/`
    - a `ci` job for this repo's own tests and lint, in `.github/workflows/ci.yml`, job `name: ci`. Read the repo's scripts and config to find the commands; ask the captain only when there are none.
    - a `LICENSE` if missing: ask the captain which.
@@ -59,7 +59,7 @@ Each step ends when its check passes.
    Templates say `main`: use the repo's default branch instead wherever they name a branch. Every `uses:` is pinned to a full commit SHA with the version in a comment. Done when `actionlint` passes locally (`docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint` or the binary) and the branch is pushed.
 4. **First PR.** Open it as the author app (see `github-pr-author`). Its title is `chore: protect main`. Done when every job in `guard.yml` and `ci.yml` has reported on it. The protection does not exist yet, so the captain reviews and merges this one by hand.
 5. **Settings.** `SETUP apply OWNER/REPO --checks ci,pr-title,gitleaks,actionlint`, adding `--beta` for repos with a beta channel. It sets merge options, Actions permissions, security features, labels, the `pr-review` environment and the ruleset, and reports anything it could not set. Done when `SETUP audit OWNER/REPO --checks …` exits 0.
-6. **Observe week.** Set the variable `PR_REVIEW_MODE` to `observe` in the `pr-review` environment. The reviewer comments *would approve* instead of approving, and the captain approves. After a week of PRs where its verdicts matched the captain's, the captain sets it to `enforce`.
+6. **Observe week.** Set the variable `PR_REVIEW_MODE` to `observe` in the `pr-review` environment. The reviewer comments *would approve* instead of approving, and the captain approves (and on advisory repos merges). After a week of PRs where its verdicts matched the captain's, the captain sets it to `enforce`; on advisory repos the review app then merges what it approves.
 
 ## Audit and adjust
 

@@ -7,7 +7,7 @@ Agent skills for Claude Code that I use in my own work, published so they instal
 | Skill | What it does |
 |---|---|
 | [`github-repo-setup`](github/github-repo-setup/SKILL.md) | Protects `main` in a GitHub repo where agents write the code: ruleset, merge settings, CI guards, versioning, CODEOWNERS, VISION.md, and the review workflow. Audits drift and has a logged emergency switch. Run by the repo owner. |
-| [`github-pr-review`](github/github-pr-review/SKILL.md) | The review agent: reads a pull request against `VISION.md` and the PR policy, approves ordinary changes and escalates the rest to the owner. Runs in GitHub Actions. |
+| [`github-pr-review`](github/github-pr-review/SKILL.md) | The review agent: reads a pull request against `VISION.md` and the PR policy, approves ordinary changes (and merges them where GitHub cannot require the approval) and escalates the rest to the owner. Runs in GitHub Actions. |
 | [`github-pr-author`](github/github-pr-author/SKILL.md) | How a coding agent gets work onto `main`: branch, Conventional Commits title, PR, answering review, all as a GitHub App instead of the owner's account. |
 | [`youtube-research`](research/youtube-research/SKILL.md) | Reads YouTube videos through transcript, metadata and frames, with no account or API key. |
 | [`im-stuck-on`](productivity/im-stuck-on/SKILL.md) | Gets you started on a task you keep putting off: say what it is and how much time you have, and get one small first step sized to that time. Only you can invoke it. |

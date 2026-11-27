@@ -8,6 +8,8 @@ name: pr-review
 # - PRs from forks and Dependabot: labelled needs-captain; the captain approves. Text from
 #   strangers can steer an agent, and GitHub withholds secrets from Dependabot runs.
 # - The captain re-runs a review by commenting "@review ..."; the comment is a decision.
+# - Where GitHub enforces no review (private repos on GitHub Free), the merge job merges what the
+#   reviewer approved, once every check has passed; never protected paths. Elsewhere auto-merge does.
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -51,6 +53,11 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    outputs:
+      number: ${{ steps.pr.outputs.number }}
+      sha: ${{ steps.pr.outputs.sha }}
+      since: ${{ steps.start.outputs.at }}
+      approved: ${{ steps.verdict.outputs.approved }}
     steps:
       - id: start
         run: echo "at=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
@@ -125,7 +132,8 @@ jobs:
             exit 1
           fi
 
-      - name: Apply escalation (deterministic, from the reviewer's marker comment and approval)
+      - id: verdict
+        name: Apply escalation (deterministic, from the reviewer's marker comment and approval)
         if: always() && steps.pr.outputs.same_repo == 'true' && steps.app.outputs.token != ''
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
@@ -142,6 +150,7 @@ jobs:
             approved=$(gh api --paginate "repos/$GH_REPO/pulls/$PR/reviews" \
               --jq ".[] | select(.user.login == \"$BOT\" and .submitted_at >= \"$SINCE\" and .state == \"APPROVED\") | .id")
             [ -n "$approved" ] || exit 0
+            echo "approved=true" >> "$GITHUB_OUTPUT"
             labelled=$(gh pr view "$PR" --json labels --jq 'any(.labels[]; .name == "needs-captain")')
             [ "$labelled" = true ] || exit 0
             gh pr edit "$PR" --remove-label needs-captain
@@ -155,3 +164,42 @@ jobs:
               -f message="Escalated to the captain" -f event=DISMISS >/dev/null
           done
           echo "escalated to $CAPTAIN"
+
+  merge:
+    needs: review
+    if: needs.review.outputs.approved == 'true'
+    # Its own group: sharing the review's would let a queued merge cancel the review of a newer push.
+    # A newer push still ends this job: merge.sh stops when the PR head is no longer the reviewed commit.
+    concurrency:
+      group: pr-merge-${{ needs.review.outputs.number }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    environment: pr-review
+    timeout-minutes: 30 # merge.sh waits up to 20 minutes for checks still running
+    permissions:
+      contents: read
+    steps:
+      - name: Default branch (merge.sh, CODEOWNERS)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github
+          persist-credentials: false
+
+      - id: app
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
+        with:
+          app-id: ${{ vars.PR_REVIEW_APP_ID }}
+          private-key: ${{ secrets.PR_REVIEW_APP_PRIVATE_KEY }}
+
+      - name: Merge what the reviewer approved, where GitHub enforces no review
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ needs.review.outputs.number }}
+          SHA: ${{ needs.review.outputs.sha }}
+          SINCE: ${{ needs.review.outputs.since }}
+          BOT: ${{ steps.app.outputs.app-slug }}[bot]
+          CAPTAIN: ${{ github.repository_owner }}
+          MODE: ${{ vars.PR_REVIEW_MODE }}
+        run: bash .github/pr-review/merge.sh # bash, so the copy needs no executable bit
